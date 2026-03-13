@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VR experience</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        #video-feed { position: absolute; bottom: 20px; right: 20px; width: 180px; border: 2px solid #00f2ff; border-radius: 10px; transform: scaleX(-1); opacity: 0.8; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00f2ff; text-shadow: 0 0 10px #00f2ff; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="ui"><h1>VR HAND EXEPERIENCE</h1><p>🖐 MOVE | pinch ZOOM | ↔️ SWIPE SHAPE</p></div>
+    <video id="video-feed" autoplay></video>
+
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script>
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const geometries = [
+            new THREE.IcosahedronGeometry(1, 1),
+            new THREE.TorusKnotGeometry(0.7, 0.2, 100, 16),
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.SphereGeometry(1, 32, 32)
+        ];
+        let shapeIdx = 0;
+        const material = new THREE.MeshPhongMaterial({ color: 0x00f2ff, wireframe: true });
+        let mesh = new THREE.Mesh(geometries[shapeIdx], material);
+        scene.add(mesh);
+
+        scene.add(new THREE.PointLight(0xffffff, 1, 100), new THREE.AmbientLight(0x404040));
+        camera.position.z = 5;
+
+        let lastX = 0, canSwipe = true;
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks[0]) {
+                const hand = results.multiHandLandmarks[0];
+                console.log("Ruka je na pozícii X:", hand[9].x); // Toto nám v konzole povie, či AI ruku vidí
+                mesh.position.x = (hand[9].x - 0.5) * -10;
+                mesh.position.y = (hand[9].y - 0.5) * -8;
+                mesh.rotation.y = (hand[4].x - hand[20].x) * 6;
+                const dist = Math.sqrt(Math.pow(hand[4].x-hand[8].x, 2) + Math.pow(hand[4].y-hand[8].y, 2));
+                mesh.scale.set(dist*10, dist*10, dist*10);
+
+                if (Math.abs(hand[9].x - lastX) > 0.12 && canSwipe) {
+                    shapeIdx = (shapeIdx + 1) % geometries.length;
+                    mesh.geometry = geometries[shapeIdx];
+                    canSwipe = false; setTimeout(() => canSwipe = true, 500);
+                }
+                lastX = hand[9].x;
+            }
+        }
+
+        // 1. Inicializácia Hands AI (tu je ten locateFile)
+        const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+
+        // 2. Nastavenia (dôležité, aby AI vedela, čo hľadať)
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        // 3. Prepojenie výsledkov s funkciou onResults
+        hands.onResults(onResults);
+
+        // 4. Start the Camera
+        new Camera(document.getElementById('video-feed'), {
+            onFrame: async () => { 
+                await hands.send({image: document.getElementById('video-feed')}); 
+            },
+            width: 640, 
+            height: 480
+        }).start();
+
+        // 5. Start the 3D Animation
+        function animate() { 
+            requestAnimationFrame(animate); 
+            renderer.render(scene, camera); 
+        }
+        animate();
+    </script>
+</body>
+</html>
