@@ -11,7 +11,7 @@ This project harnesses the power of **MediaPipe** and **Three.js** to create an 
 * **GitHub Pages** - Project hosting
 
 ## 🎮 How to Run It?
-1. Open the application via [this link](https://RoyalmaxYT-spec.github.io/Vr-Hand-Experience-v1/)
+1. Open the application via [this link](https://RoyalmaxYT-VRHE.github.io/Vr-Hand-Experience-v1/)
 2. Grant permission to access your webcam.
 3. Show your hand to the camera and enjoy the digital interaction!
 
